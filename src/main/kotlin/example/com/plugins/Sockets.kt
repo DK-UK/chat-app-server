@@ -37,7 +37,7 @@ fun Application.configureSockets() {
                 val thisConnection = TestConnection(this)
                 allMemberSessions += thisConnection
                 try{
-                    printlngit stats("you are connected!, there are ${allMemberSessions.count()} users online.")
+                    println("you are connected!, there are ${allMemberSessions.count()} users online.")
                     chatMessage.senderId = thisConnection.name
                     val users = allMemberSessions/*.filter { it.session != this }*/.map { it.name }
 
