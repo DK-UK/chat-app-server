@@ -36,11 +36,12 @@ fun Application.configureSockets() {
             println("Adding user!")
                 val thisConnection = TestConnection(this)
                 allMemberSessions += thisConnection
-
-
                 try{
+                    send(Frame.Text("_MY_NAME_ ${thisConnection.name}"))
+
                     println("you are connected!, there are ${allMemberSessions.count()} users online.")
                     chatMessage.senderId = thisConnection.name
+
                     val users = allMemberSessions/*.filter { it.session != this }*/.map { it.name }
 
                     // send all users details to the client
