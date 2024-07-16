@@ -10,6 +10,6 @@ fun main(args: Array<String>) {
 fun Application.module() {
     configureSockets()
     configureSerialization()
-    configureDatabases()
+//    configureDatabases()
     configureRouting()
 }

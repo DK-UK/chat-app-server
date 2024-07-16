@@ -9,7 +9,7 @@ import java.sql.*
 import kotlinx.coroutines.*
 
 fun Application.configureDatabases() {
-    val dbConnection: java.sql.Connection = connectToPostgres(embedded = true)
+    /*val dbConnection: java.sql.Connection = connectToPostgres(embedded = true)
     val cityService = CityService(dbConnection)
     
     routing {
@@ -49,7 +49,7 @@ fun Application.configureDatabases() {
     }
 }
 
-/**
+*//**
  * Makes a connection to a Postgres database.
  *
  * In order to connect to your running Postgres process,
@@ -69,7 +69,7 @@ fun Application.configureDatabases() {
  *
  * @return [Connection] that represent connection to the database. Please, don't forget to close this connection when
  * your application shuts down by calling [Connection.close]
- * */
+ * *//*
 fun Application.connectToPostgres(embedded: Boolean): Connection {
     Class.forName("org.postgresql.Driver")
     if (embedded) {
@@ -80,5 +80,5 @@ fun Application.connectToPostgres(embedded: Boolean): Connection {
         val password = environment.config.property("postgres.password").getString()
 
         return DriverManager.getConnection(url, user, password)
-    }
+    }*/
 }
