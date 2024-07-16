@@ -8,6 +8,7 @@ import io.ktor.server.websocket.*
 import io.ktor.util.reflect.*
 import io.ktor.websocket.*
 import io.ktor.websocket.serialization.*
+import kotlinx.coroutines.delay
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -32,10 +33,11 @@ fun Application.configureSockets() {
 
         webSocket("/chat") {
             var chatMessage : ChatMessage = ChatMessage()
-
             println("Adding user!")
                 val thisConnection = TestConnection(this)
                 allMemberSessions += thisConnection
+
+
                 try{
                     println("you are connected!, there are ${allMemberSessions.count()} users online.")
                     chatMessage.senderId = thisConnection.name
@@ -44,7 +46,7 @@ fun Application.configureSockets() {
                     // send all users details to the client
                     // for choose to interaction
                     allMemberSessions.forEach { current->
-                        current.session.outgoing.send(Frame.Text(users.filter { it != current.name }.joinToString(",")))
+                        current.session.outgoing.send(Frame.Text("NEW_USERS ${users.filter { it != current.name }.joinToString(",")}"))
                     }
 
                     for (frame in incoming){
@@ -72,6 +74,7 @@ fun Application.configureSockets() {
                             receiverSession.send(Frame.Text(encodedMessage))
                         }
                     }
+
                 }
                 catch (e : Exception){
                     println("error : ${e.localizedMessage}")
