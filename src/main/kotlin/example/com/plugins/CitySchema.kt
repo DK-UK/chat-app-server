@@ -7,36 +7,59 @@ import java.sql.Statement
 
 @Serializable
 data class City(val name: String, val population: Int)
-class CityService(private val connection: Connection) {
+
+@Serializable
+data class Register(
+    var id: Long = 0L,
+    var profile_image : String = "",
+    var name : String = "",
+    var email : String = "",
+    var password : String = "",
+    var profile_bio : String = ""
+)
+
+class ChatService(private val connection: Connection) {
     companion object {
-        private const val CREATE_TABLE_CITIES =
-            "CREATE TABLE CITIES (ID SERIAL PRIMARY KEY, NAME VARCHAR(255), POPULATION INT);"
+
         private const val SELECT_CITY_BY_ID = "SELECT name, population FROM cities WHERE id = ?"
         private const val INSERT_CITY = "INSERT INTO cities (name, population) VALUES (?, ?)"
         private const val UPDATE_CITY = "UPDATE cities SET name = ?, population = ? WHERE id = ?"
         private const val DELETE_CITY = "DELETE FROM cities WHERE id = ?"
 
+        private const val CREATE_TABLE_REGISTER =
+            "CREATE TABLE IF NOT EXISTS Register(id SERIAL PRIMARY KEY," +
+                    "profile_img varchar(2048), name varchar(50) NOT NULL, email varchar(100) NOT NULL," +
+                    "password varchar(50) NOT NULL, profile_bio varchar(250))"
+
+        private const val SELECT_USER = "SELECT * FROM Register"
+        private const val REGISTER_USER = "INSERT INTO Register (profile_img, name, email, password, profile_bio) VALUES (?,?,?,?,?)"
+        private const val DROP_TABLE_REGISTER = "DROP TABLE Register"
+
     }
 
     init {
         val statement = connection.createStatement()
-        statement.executeUpdate(CREATE_TABLE_CITIES)
+        statement.executeUpdate(CREATE_TABLE_REGISTER)
     }
 
     private var newCityId = 0
 
-    // Create new city
-    suspend fun create(city: City): Int = withContext(Dispatchers.IO) {
-        val statement = connection.prepareStatement(INSERT_CITY, Statement.RETURN_GENERATED_KEYS)
-        statement.setString(1, city.name)
-        statement.setInt(2, city.population)
+
+    suspend fun registerUser(register: Register) : Int = withContext(Dispatchers.IO) {
+        val statement = connection.prepareStatement(REGISTER_USER, Statement.RETURN_GENERATED_KEYS)
+        statement.setString(1, register.profile_image)
+        statement.setString(2, register.name)
+        statement.setString(3, register.email)
+        statement.setString(4, register.password)
+        statement.setString(5, register.profile_bio)
         statement.executeUpdate()
 
         val generatedKeys = statement.generatedKeys
-        if (generatedKeys.next()) {
+        if (generatedKeys.next()){
             return@withContext generatedKeys.getInt(1)
-        } else {
-            throw Exception("Unable to retrieve the id of the newly inserted city")
+        }
+        else{
+            throw Exception("Unable to retrieve the id of the newly registered user")
         }
     }
 
@@ -55,6 +78,23 @@ class CityService(private val connection: Connection) {
         }
     }
 
+    suspend fun getUsers() : List<Register> = withContext(Dispatchers.IO) {
+        val users = mutableListOf<Register>()
+        val statement = connection.prepareStatement(SELECT_USER)
+        val resultSet = statement.executeQuery()
+        while (resultSet.next()){
+            users.add(Register(
+                id = resultSet.getLong(1),
+                profile_image = resultSet.getString(2),
+                name = resultSet.getString(3),
+                email = resultSet.getString(4),
+                password = resultSet.getString(5),
+                profile_bio = resultSet.getString(6)
+            ))
+        }
+        return@withContext users
+    }
+
     // Update a city
     suspend fun update(id: Int, city: City) = withContext(Dispatchers.IO) {
         val statement = connection.prepareStatement(UPDATE_CITY)
@@ -68,6 +108,11 @@ class CityService(private val connection: Connection) {
     suspend fun delete(id: Int) = withContext(Dispatchers.IO) {
         val statement = connection.prepareStatement(DELETE_CITY)
         statement.setInt(1, id)
+        statement.executeUpdate()
+    }
+
+    suspend fun dropTable() = withContext(Dispatchers.IO) {
+        val statement = connection.prepareStatement(DROP_TABLE_REGISTER)
         statement.executeUpdate()
     }
 }
