@@ -1,5 +1,7 @@
 package example.com.plugins
 
+import example.com.model.AuthUser
+import example.com.model.Register
 import kotlinx.coroutines.*
 import kotlinx.serialization.Serializable
 import java.sql.Connection
@@ -8,15 +10,6 @@ import java.sql.Statement
 @Serializable
 data class City(val name: String, val population: Int)
 
-@Serializable
-data class Register(
-    var id: Long = 0L,
-    var profile_image : String = "",
-    var name : String = "",
-    var email : String = "",
-    var password : String = "",
-    var profile_bio : String = ""
-)
 
 class ChatService(private val connection: Connection) {
     companion object {
@@ -29,10 +22,12 @@ class ChatService(private val connection: Connection) {
         private const val CREATE_TABLE_REGISTER =
             "CREATE TABLE IF NOT EXISTS Register(id SERIAL PRIMARY KEY," +
                     "profile_img varchar(2048), name varchar(50) NOT NULL, email varchar(100) NOT NULL," +
-                    "password varchar(50) NOT NULL, profile_bio varchar(250))"
+                    "password varchar(50) NOT NULL, profile_bio varchar(250), created_at BIGINT NOT NULL DEFAULT 0)"
 
         private const val SELECT_USER = "SELECT * FROM Register"
-        private const val REGISTER_USER = "INSERT INTO Register (profile_img, name, email, password, profile_bio) VALUES (?,?,?,?,?)"
+        private const val REGISTER_USER = "INSERT INTO Register (profile_img, name, email, password, profile_bio, created_at) VALUES (?,?,?,?,?,?)"
+        private const val IS_USER_EXISTS = "SELECT * FROM Register where email = ?"
+
         private const val DROP_TABLE_REGISTER = "DROP TABLE Register"
 
     }
@@ -44,6 +39,38 @@ class ChatService(private val connection: Connection) {
 
     private var newCityId = 0
 
+    suspend fun checkIfUserExists(email : String) : Boolean = withContext(Dispatchers.IO) {
+        val statement = connection.prepareStatement(IS_USER_EXISTS)
+        statement.setString(1, email)
+        val result = statement.executeQuery()
+        if (result.next()){
+            return@withContext true
+        }
+        else{
+            return@withContext false
+        }
+    }
+
+    suspend fun authenticateUser(authUser: AuthUser) : Register = withContext(Dispatchers.IO) {
+        val statement = connection.prepareStatement(IS_USER_EXISTS)
+        statement.setString(1, authUser.email)
+        val resultSet = statement.executeQuery()
+
+        if (resultSet.next()){
+            return@withContext Register(
+                id = resultSet.getLong(1),
+                profile_image = resultSet.getString(2),
+                name = resultSet.getString(3),
+                email = resultSet.getString(4),
+                password = resultSet.getString(5),
+                profile_bio = resultSet.getString(6),
+                created_at = resultSet.getLong(7)
+            )
+        }
+        else{
+            return@withContext Register()
+        }
+    }
 
     suspend fun registerUser(register: Register) : Int = withContext(Dispatchers.IO) {
         val statement = connection.prepareStatement(REGISTER_USER, Statement.RETURN_GENERATED_KEYS)
@@ -52,6 +79,7 @@ class ChatService(private val connection: Connection) {
         statement.setString(3, register.email)
         statement.setString(4, register.password)
         statement.setString(5, register.profile_bio)
+        statement.setLong(6, register.created_at)
         statement.executeUpdate()
 
         val generatedKeys = statement.generatedKeys
@@ -59,7 +87,7 @@ class ChatService(private val connection: Connection) {
             return@withContext generatedKeys.getInt(1)
         }
         else{
-            throw Exception("Unable to retrieve the id of the newly registered user")
+            return@withContext -1
         }
     }
 
@@ -89,7 +117,8 @@ class ChatService(private val connection: Connection) {
                 name = resultSet.getString(3),
                 email = resultSet.getString(4),
                 password = resultSet.getString(5),
-                profile_bio = resultSet.getString(6)
+                profile_bio = resultSet.getString(6),
+                created_at = resultSet.getLong(7)
             ))
         }
         return@withContext users

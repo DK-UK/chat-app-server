@@ -1,5 +1,7 @@
 package example.com.plugins
 
+import example.com.model.AuthUser
+import example.com.model.Register
 import io.ktor.http.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -8,18 +10,45 @@ import io.ktor.server.routing.*
 import java.sql.*
 
 fun Application.configureDatabases() {
-    val dbConnection: java.sql.Connection = connectToPostgres(embedded = true)
+    val dbConnection: Connection = connectToPostgres(embedded = true)
     val chatService = ChatService(dbConnection)
     
     routing {
 
-        get("/connect") {
-            call.respond(dbConnection.isClosed)
-        }
         post("/register"){
             val user = call.receive<Register>()
             val id = chatService.registerUser(user)
+
             call.respond(HttpStatusCode.Created, id)
+        }
+
+        post("/if_user_exists"){
+            val user = call.receive<Register>()
+            val check = chatService.checkIfUserExists(user.email)
+            if (check){
+                call.respond(HttpStatusCode.Found, check)
+            }
+            else{
+                val id = chatService.registerUser(user)
+                call.respond(HttpStatusCode.Created, id)
+            }
+        }
+
+        post("/auth_user"){
+            val user = call.receive<AuthUser>()
+            val check = chatService.authenticateUser(user)
+
+            if (check.id >= 0){
+                if (user.password == check.password){
+                    call.respond(HttpStatusCode.OK, check)
+                }
+                else{
+                    call.respond(HttpStatusCode.NotFound, -1)
+                }
+            }
+            else{
+                call.respond(HttpStatusCode.NotFound, -1)
+            }
         }
 
         get("/getallusers"){
