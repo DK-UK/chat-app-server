@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "src/main/kotlin",
+      "use": "@vercel/kotlin",
+      "config": {
+        "ktor": {
+          "mainClass": "com.example.Application.kt"
+        }
+      }
+    }
+  ],
+  "routes": [
+    {
+      "src": "/*",
+      "dest": "index.html"
+    }
+  ]
+}
